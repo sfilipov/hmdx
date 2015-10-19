@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import Database.OLAP
 
 main :: IO ()
-main = someFunc
+main = sendOlapRequest
