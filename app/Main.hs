@@ -24,8 +24,8 @@ main = do
 addAuth :: Request -> Request
 addAuth req = applyBasicAuth "WIN-SSAS\\ReadUser" "Password01" req
 
-getResponse :: Transport -> IO Dict
-getResponse t = invokeWS t discAction header body parser
+getResponse :: Transport -> IO Text
+getResponse t = invokeWS t discAction header body (CursorParser parser)
   where
     discAction = "urn:schemas-microsoft-com:xml-analysis:Discover"
     execAction = "urn:schemas-microsoft-com:xml-analysis:Execute"
@@ -39,7 +39,10 @@ getResponse t = invokeWS t discAction header body parser
              element "RequestType" $ content "DISCOVER_PROPERTIES"
              element "Restrictions" $ element "RestrictionList"
                                     $ element "PropertyName"
-                                    $ content "DbpropMsmdSubqueries"
+                                    $ content "Catalog"
              element "Properties" $ element "PropertyList" $ ()
 
-    parser = dictBy "return"
+    parser :: Cursor -> Text
+    parser cur = let result  = head $ cur $// laxElement "row"
+                     catalog = readT "Value" result
+                 in catalog
