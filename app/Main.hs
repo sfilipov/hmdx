@@ -33,13 +33,13 @@ getResponse t = invokeWS t discAction header body parser
     header = elementA "Version"
         [ ("xmlns", "http://schemas.microsoft.com/analysisservices/2008/engine/100")
         , ("Sequence", "400")
-        ] $ comment "asdasd"
+        ] $ ()
 
     body = elementA "Discover" [("xmlns","urn:schemas-microsoft-com:xml-analysis")] $ do
              element "RequestType" $ content "DISCOVER_PROPERTIES"
              element "Restrictions" $ element "RestrictionList"
                                     $ element "PropertyName"
                                     $ content "DbpropMsmdSubqueries"
-             element "Properties" $ element "PropertyList" $ comment "asdasd"
+             element "Properties" $ element "PropertyList" $ ()
 
     parser = dictBy "return"
