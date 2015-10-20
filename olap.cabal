@@ -30,7 +30,9 @@ executable olap-exe
                      , xml-conduit-writer
                      , xml-conduit
                      , text
+                     , http-client
   default-language:    Haskell2010
+  other-extensions:          OverloadedStrings
 
 test-suite olap-test
   type:                exitcode-stdio-1.0
