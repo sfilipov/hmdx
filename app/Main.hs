@@ -10,37 +10,14 @@ import           Network.SOAP.Transport.HTTP (initTransport)
 import           Network.SOAP.Parsing.Cursor (Dict, dictBy, readT, readC)
 import           Text.XML.Cursor hiding (element, content)
 import           Text.XML.Writer (elementA, element, content, comment)
-
+import           Database.OLAP (discoverProperty)
 main :: IO ()
 main = do
     let ip = "172.28.128.5"
     let url = "http://" ++ ip ++ "/OLAP/msmdpump.dll"
     transport <- initTransport url addAuth id
-    response <- getResponse transport
+    response <- discoverProperty transport "Catalog"
     print response
 
 addAuth :: Request -> Request
 addAuth req = applyBasicAuth "WIN-SSAS\\ReadUser" "Password01" req
-
-getResponse :: Transport -> IO Text
-getResponse t = invokeWS t discAction header body (CursorParser parser)
-  where
-    discAction = "urn:schemas-microsoft-com:xml-analysis:Discover"
-    execAction = "urn:schemas-microsoft-com:xml-analysis:Execute"
-
-    header = elementA "Version"
-        [ ("xmlns", "http://schemas.microsoft.com/analysisservices/2008/engine/100")
-        , ("Sequence", "400")
-        ] $ ()
-
-    body = elementA "Discover" [("xmlns","urn:schemas-microsoft-com:xml-analysis")] $ do
-             element "RequestType" $ content "DISCOVER_PROPERTIES"
-             element "Restrictions" $ element "RestrictionList"
-                                    $ element "PropertyName"
-                                    $ content "Catalog"
-             element "Properties" $ element "PropertyList" $ ()
-
-    parser :: Cursor -> Text
-    parser cur = let result  = head $ cur $// laxElement "row"
-                     catalog = readT "Value" result
-                 in catalog
