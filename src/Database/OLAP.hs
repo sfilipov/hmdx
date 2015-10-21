@@ -8,7 +8,7 @@ import           Data.Text (Text)
 import           Network.SOAP (invokeWS, Transport, ResponseParser(CursorParser))
 import           Network.SOAP.Parsing.Cursor (readT)
 import           Text.XML.Cursor hiding (element, content)
-import           Text.XML.Writer (elementA, element, content, comment)
+import           Text.XML.Writer (elementA, element, content)
 
 type PropertyName = Text
 
