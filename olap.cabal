@@ -16,6 +16,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Database.OLAP
+  ghc-options:         -Wall -fwarn-tabs
   build-depends:       base >= 4.7 && < 5
                      , soap
                      , text
@@ -26,7 +27,7 @@ library
 executable olap-exe
   hs-source-dirs:      app
   main-is:             Main.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall -fwarn-tabs
   build-depends:       base
                      , olap
                      , soap
@@ -43,7 +44,7 @@ test-suite olap-test
   main-is:             Spec.hs
   build-depends:       base
                      , olap
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall -fwarn-tabs
   default-language:    Haskell2010
 
 source-repository head
