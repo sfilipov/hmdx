@@ -2,15 +2,15 @@ module Main where
 
 import           Network.HTTP.Client (Request, applyBasicAuth)
 import           Network.SOAP.Transport.HTTP (initTransport)
-import           Database.OLAP (discoverProperty)
+import           Database.OLAP (discoverProperty, executeMdx)
 
 main :: IO ()
 main = do
     let ip = "172.28.128.5"
     let url = "http://" ++ ip ++ "/OLAP/msmdpump.dll"
+    let query1 = "SELECT {[Measures].[Internet Order Count]} ON COLUMNS, {[Date].[Fiscal].[Fiscal Year]} ON ROWS FROM [Adventure Works] WHERE {[Sales Territory].[Sales Territory Country].&[United Kingdom]}"
     transport <- initTransport url addAuth id
-    response <- discoverProperty transport "Catalog"
-    print response
+    executeMdx transport query1 >>= print
 
 addAuth :: Request -> Request
 addAuth req = applyBasicAuth "WIN-SSAS\\ReadUser" "Password01" req
