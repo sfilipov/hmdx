@@ -9,7 +9,7 @@ main :: IO ()
 main = do
     let ip = "172.28.128.5"
     let url = "http://" ++ ip ++ "/OLAP/msmdpump.dll"
-    let query1 = "SELECT {[Measures].[Internet Order Count]} ON COLUMNS, {[Date].[Fiscal].[Fiscal Year]} ON ROWS FROM [Adventure Works] WHERE {[Sales Territory].[Sales Territory Country].&[United Kingdom]}"
+    let query1 = "SELECT {[Measures].[Internet Freight Cost], [Measures].[Internet Tax Amount]} ON COLUMNS, {[Date].[Fiscal].[Fiscal Year]} ON ROWS FROM [Adventure Works] WHERE {[Sales Territory].[Sales Territory Country].&[United Kingdom]}"
     transport <- initTransport url addAuth id
     executeMdx transport query1 >>= print
 
