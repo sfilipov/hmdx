@@ -33,7 +33,7 @@ discoverProperty t property = invokeWS t action header body (CursorParser parser
 
 type MdxQuery = Text
 
-executeMdx :: Transport -> MdxQuery -> IO ([(Int, [Text])])
+executeMdx :: Transport -> MdxQuery -> IO (IntMap [Text])
 executeMdx t query = invokeWS t action () body (CursorParser parser)
   where
     action = "urn:schemas-microsoft-com:xml-analysis:Execute"
@@ -44,10 +44,10 @@ executeMdx t query = invokeWS t action () body (CursorParser parser)
                element "Catalog" $ content "AdventureWorksDW2012Multidimensional-SE"
                element "Dialect" $ content "MDX"
 
-    parser :: Cursor -> [(Int, [Text])]
+    parser :: Cursor -> IntMap [Text]
     parser cur = allM
       where
         members0 = cur $// attributeIs "name" "Axis0" &// laxElement "Member"
         members1 = cur $// attributeIs "name" "Axis1" &// laxElement "Member"
         toCapt   = fmap (readT "Caption")
-        allM     = [(0, toCapt members0), (1, toCapt members1)]
+        allM     = asIntMap $ insertMap 1 (toCapt members1) $ singletonMap 0 (toCapt members0)
