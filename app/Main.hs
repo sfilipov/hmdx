@@ -1,5 +1,6 @@
 module Main where
 
+import           ClassyPrelude
 import           Network.HTTP.Client (Request, applyBasicAuth)
 import           Network.SOAP.Transport.HTTP (initTransport)
 import           Database.OLAP (discoverProperty, executeMdx)

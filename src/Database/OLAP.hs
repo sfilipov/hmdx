@@ -1,11 +1,9 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Database.OLAP
     ( discoverProperty
     , executeMdx
     ) where
 
-import           Data.Text (Text)
+import           ClassyPrelude
 import           Network.SOAP (invokeWS, Transport, ResponseParser(CursorParser))
 import           Network.SOAP.Parsing.Cursor (readT)
 import           Text.XML.Cursor hiding (element, content)
@@ -31,7 +29,7 @@ discoverProperty t property = invokeWS t action header body (CursorParser parser
 
     parser :: Cursor -> Text
     parser cur = readT "Value" row
-                 where row = head $ cur $// laxElement "row"
+                 where row = unsafeHead $ cur $// laxElement "row"
 
 type MdxQuery = Text
 
@@ -48,4 +46,4 @@ executeMdx t query = invokeWS t action () body (CursorParser parser)
 
     parser :: Cursor -> Text
     parser cur = readT "Value" row
-                 where row = head $ cur $// laxElement "row"
+                 where row = unsafeHead $ cur $// laxElement "row"
