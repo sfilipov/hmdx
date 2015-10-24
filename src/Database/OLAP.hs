@@ -3,7 +3,8 @@ module Database.OLAP
     , executeMdx
     ) where
 
-import           ClassyPrelude
+import           BasicPrelude
+import           Data.IntMap as M
 import           Network.SOAP (invokeWS, Transport, ResponseParser(CursorParser))
 import           Network.SOAP.Parsing.Cursor (readT)
 import           Text.XML.Cursor hiding (element, content)
@@ -29,11 +30,11 @@ discoverProperty t property = invokeWS t action header body (CursorParser parser
 
     parser :: Cursor -> Text
     parser cur = readT "Value" row
-                 where row = unsafeHead $ cur $// laxElement "row"
+                 where row = head $ cur $// laxElement "row"
 
 type MdxQuery = Text
 
-executeMdx :: Transport -> MdxQuery -> IO (IntMap [Text])
+executeMdx :: Transport -> MdxQuery -> IO (IntMap [Text], IntMap Double)
 executeMdx t query = invokeWS t action () body (CursorParser parser)
   where
     action = "urn:schemas-microsoft-com:xml-analysis:Execute"
@@ -44,10 +45,23 @@ executeMdx t query = invokeWS t action () body (CursorParser parser)
                element "Catalog" $ content "AdventureWorksDW2012Multidimensional-SE"
                element "Dialect" $ content "MDX"
 
-    parser :: Cursor -> IntMap [Text]
-    parser cur = allM
+    toMembers :: Cursor -> IntMap [Text]
+    toMembers cur = allM
       where
         members0 = cur $// attributeIs "name" "Axis0" &// laxElement "Member"
         members1 = cur $// attributeIs "name" "Axis1" &// laxElement "Member"
         toCapt   = fmap (readT "Caption")
-        allM     = asIntMap $ insertMap 1 (toCapt members1) $ singletonMap 0 (toCapt members0)
+        allM     = M.insert 1 (toCapt members1) $ M.singleton 0 (toCapt members0)
+
+    toCells :: Cursor -> IntMap Double
+    toCells cur = allC
+      where
+        cells = cur $// laxElement "Cell"
+        readA a c = read $ concat $ c $| attribute a
+        ordinals = fmap (readA "CellOrdinal") cells
+        values = fmap (readT "Value") cells
+        dValues = fmap (read :: Text -> Double) values
+        allC  = M.fromList $ zip ordinals dValues
+
+    parser :: Cursor -> (IntMap [Text], IntMap Double)
+    parser c = (toMembers c, toCells c)
