@@ -1,5 +1,5 @@
 module Database.OLAP
-    ( discoverProperty
+    ( mdSchemaDimensions
     , executeMdx
     ) where
 
@@ -10,39 +10,40 @@ import           Network.SOAP.Parsing.Cursor (readT)
 import           Text.XML.Cursor hiding (element, content)
 import           Text.XML.Writer (elementA, element, content)
 
-type PropertyName = Text
+type CatalogName = Text
+type CubeName = Text
+type MdxQuery = Text
 
-discoverProperty :: Transport -> PropertyName -> IO Text
-discoverProperty t property = invokeWS t action header body (CursorParser parser)
+mdSchemaDimensions :: Transport -> CatalogName -> CubeName -> IO [Text]
+mdSchemaDimensions t catalog cube = invokeWS t action () body (CursorParser parser)
   where
     action = "urn:schemas-microsoft-com:xml-analysis:Discover"
 
-    header = elementA "Version"
-        [ ("xmlns", "http://schemas.microsoft.com/analysisservices/2008/engine/100")
-        , ("Sequence", "400")
-        ] $ ()
     body = elementA "Discover" [("xmlns","urn:schemas-microsoft-com:xml-analysis")] $ do
-             element "RequestType" $ content "DISCOVER_PROPERTIES"
+             element "RequestType" $ content "MDSCHEMA_DIMENSIONS"
              element "Restrictions" $ element "RestrictionList"
-                                    $ element "PropertyName"
-                                    $ content property
-             element "Properties" $ element "PropertyList" $ ()
+                                    $ element "CUBE_NAME"
+                                    $ content cube
+             element "Properties" $ element "PropertyList"
+                                  $ element "Catalog"
+                                  $ content catalog
 
-    parser :: Cursor -> Text
-    parser cur = readT "Value" row
-                 where row = head $ cur $// laxElement "row"
+    parser :: Cursor -> [Text]
+    parser c = dimensions
+      where
+        rows = c $// laxElement "row"
+        dimensions = fmap (readT "DIMENSION_UNIQUE_NAME") rows
 
-type MdxQuery = Text
 
-executeMdx :: Transport -> MdxQuery -> IO (IntMap [Text], IntMap Double)
-executeMdx t query = invokeWS t action () body (CursorParser parser)
+executeMdx :: Transport -> CatalogName -> MdxQuery -> IO (IntMap [Text], IntMap Double)
+executeMdx t catalog query = invokeWS t action () body (CursorParser parser)
   where
     action = "urn:schemas-microsoft-com:xml-analysis:Execute"
 
     body = elementA "Execute" [("xmlns","urn:schemas-microsoft-com:xml-analysis")] $ do
              element "Command" $ element "Statement" $ content query
              element "Properties" $ element "PropertyList" $ do
-               element "Catalog" $ content "AdventureWorksDW2012Multidimensional-SE"
+               element "Catalog" $ content catalog
                element "Dialect" $ content "MDX"
 
     toMembers :: Cursor -> IntMap [Text]
