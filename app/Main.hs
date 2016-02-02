@@ -14,4 +14,4 @@ main = do
     executeMdx transport query1 >>= print
 
 addAuth :: Request -> Request
-addAuth req = applyBasicAuth "WIN-SSAS\\ReadUser" "Password01" req
+addAuth = applyBasicAuth "WIN-SSAS\\ReadUser" "Password01"
