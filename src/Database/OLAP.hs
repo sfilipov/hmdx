@@ -1,6 +1,7 @@
 module Database.OLAP
     ( mdSchemaDimensions
     , mdSchemaHierarchies
+    , mdSchemaLevels
     , executeMdx
     ) where
 
@@ -14,6 +15,7 @@ import           Text.XML.Writer (elementA, element, content)
 type CatalogName = Text
 type CubeName = Text
 type DimensionName = Text
+type HierarchyName = Text
 type MdxQuery = Text
 
 mdSchemaDimensions :: Transport -> CatalogName -> CubeName -> IO [Text]
@@ -56,6 +58,27 @@ mdSchemaHierarchies t catalog cube dimension = invokeWS t action () body (Cursor
       where
         rows = c $// laxElement "row"
         dimensions = fmap (readT "HIERARCHY_UNIQUE_NAME") rows
+
+
+mdSchemaLevels :: Transport -> CatalogName -> CubeName -> HierarchyName -> IO [Text]
+mdSchemaLevels t catalog cube hierarchy = invokeWS t action () body (CursorParser parser)
+  where
+    action = "urn:schemas-microsoft-com:xml-analysis:Discover"
+
+    body = elementA "Discover" [("xmlns","urn:schemas-microsoft-com:xml-analysis")] $ do
+      element "RequestType" $ content "MDSCHEMA_LEVELS"
+      element "Restrictions" $ element "RestrictionList" $ do
+        element "CUBE_NAME" $ content cube
+        element "HIERARCHY_UNIQUE_NAME" $ content hierarchy
+      element "Properties" $ element "PropertyList"
+                          $ element "Catalog"
+                          $ content catalog
+
+    parser :: Cursor -> [Text]
+    parser c = dimensions
+      where
+        rows = c $// laxElement "row"
+        dimensions = fmap (readT "LEVEL_UNIQUE_NAME") rows
 
 
 executeMdx :: Transport -> CatalogName -> MdxQuery -> IO (IntMap [Text], IntMap Double)
