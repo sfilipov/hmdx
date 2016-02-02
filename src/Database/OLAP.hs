@@ -1,5 +1,10 @@
 module Database.OLAP
-    ( mdSchemaDimensions
+    ( defaultSettings
+    , catalogName
+    , cubeName
+    , dimensionName
+    , hierarchyName
+    , mdSchemaDimensions
     , mdSchemaHierarchies
     , mdSchemaLevels
     , executeMdx
@@ -12,14 +17,20 @@ import           Network.SOAP.Parsing.Cursor (readT)
 import           Text.XML.Cursor hiding (element, content)
 import           Text.XML.Writer (elementA, element, content)
 
-type CatalogName = Text
-type CubeName = Text
-type DimensionName = Text
-type HierarchyName = Text
 type MdxQuery = Text
 
-mdSchemaDimensions :: Transport -> CatalogName -> CubeName -> IO [Text]
-mdSchemaDimensions t catalog cube = invokeWS t action () body (CursorParser parser)
+data SearchSettings = SearchSettings
+    { catalogName :: Text
+    , cubeName :: Text
+    , dimensionName :: Text
+    , hierarchyName :: Text
+    }
+
+defaultSettings :: SearchSettings
+defaultSettings = SearchSettings "" "" "" ""
+
+mdSchemaDimensions :: Transport -> SearchSettings -> IO [Text]
+mdSchemaDimensions t settings = invokeWS t action () body (CursorParser parser)
   where
     action = "urn:schemas-microsoft-com:xml-analysis:Discover"
 
@@ -27,10 +38,10 @@ mdSchemaDimensions t catalog cube = invokeWS t action () body (CursorParser pars
              element "RequestType" $ content "MDSCHEMA_DIMENSIONS"
              element "Restrictions" $ element "RestrictionList"
                                     $ element "CUBE_NAME"
-                                    $ content cube
+                                    $ content $ cubeName settings
              element "Properties" $ element "PropertyList"
                                   $ element "Catalog"
-                                  $ content catalog
+                                  $ content $ catalogName settings
 
     parser :: Cursor -> [Text]
     parser c = dimensions
@@ -39,19 +50,19 @@ mdSchemaDimensions t catalog cube = invokeWS t action () body (CursorParser pars
         dimensions = fmap (readT "DIMENSION_UNIQUE_NAME") rows
 
 
-mdSchemaHierarchies :: Transport -> CatalogName -> CubeName -> DimensionName -> IO [Text]
-mdSchemaHierarchies t catalog cube dimension = invokeWS t action () body (CursorParser parser)
+mdSchemaHierarchies :: Transport -> SearchSettings -> IO [Text]
+mdSchemaHierarchies t settings = invokeWS t action () body (CursorParser parser)
   where
     action = "urn:schemas-microsoft-com:xml-analysis:Discover"
 
     body = elementA "Discover" [("xmlns","urn:schemas-microsoft-com:xml-analysis")] $ do
       element "RequestType" $ content "MDSCHEMA_HIERARCHIES"
       element "Restrictions" $ element "RestrictionList" $ do
-        element "CUBE_NAME" $ content cube
-        element "DIMENSION_UNIQUE_NAME" $ content dimension
+        element "CUBE_NAME" $ content $ cubeName settings
+        element "DIMENSION_UNIQUE_NAME" $ content $ dimensionName settings
       element "Properties" $ element "PropertyList"
                           $ element "Catalog"
-                          $ content catalog
+                          $ content $ catalogName settings
 
     parser :: Cursor -> [Text]
     parser c = dimensions
@@ -60,19 +71,19 @@ mdSchemaHierarchies t catalog cube dimension = invokeWS t action () body (Cursor
         dimensions = fmap (readT "HIERARCHY_UNIQUE_NAME") rows
 
 
-mdSchemaLevels :: Transport -> CatalogName -> CubeName -> HierarchyName -> IO [Text]
-mdSchemaLevels t catalog cube hierarchy = invokeWS t action () body (CursorParser parser)
+mdSchemaLevels :: Transport -> SearchSettings -> IO [Text]
+mdSchemaLevels t settings = invokeWS t action () body (CursorParser parser)
   where
     action = "urn:schemas-microsoft-com:xml-analysis:Discover"
 
     body = elementA "Discover" [("xmlns","urn:schemas-microsoft-com:xml-analysis")] $ do
       element "RequestType" $ content "MDSCHEMA_LEVELS"
       element "Restrictions" $ element "RestrictionList" $ do
-        element "CUBE_NAME" $ content cube
-        element "HIERARCHY_UNIQUE_NAME" $ content hierarchy
+        element "CUBE_NAME" $ content $ cubeName settings
+        element "HIERARCHY_UNIQUE_NAME" $ content $ hierarchyName settings
       element "Properties" $ element "PropertyList"
                           $ element "Catalog"
-                          $ content catalog
+                          $ content $ catalogName settings
 
     parser :: Cursor -> [Text]
     parser c = dimensions
@@ -81,15 +92,15 @@ mdSchemaLevels t catalog cube hierarchy = invokeWS t action () body (CursorParse
         dimensions = fmap (readT "LEVEL_UNIQUE_NAME") rows
 
 
-executeMdx :: Transport -> CatalogName -> MdxQuery -> IO (IntMap [Text], IntMap Double)
-executeMdx t catalog query = invokeWS t action () body (CursorParser parser)
+executeMdx :: Transport -> SearchSettings -> MdxQuery -> IO (IntMap [Text], IntMap Double)
+executeMdx t settings query = invokeWS t action () body (CursorParser parser)
   where
     action = "urn:schemas-microsoft-com:xml-analysis:Execute"
 
     body = elementA "Execute" [("xmlns","urn:schemas-microsoft-com:xml-analysis")] $ do
              element "Command" $ element "Statement" $ content query
              element "Properties" $ element "PropertyList" $ do
-               element "Catalog" $ content catalog
+               element "Catalog" $ content $ catalogName settings
                element "Dialect" $ content "MDX"
 
     toMembers :: Cursor -> IntMap [Text]
