@@ -26,70 +26,47 @@ data SearchSettings = SearchSettings
     , hierarchyName :: Text
     }
 
+
 defaultSettings :: SearchSettings
 defaultSettings = SearchSettings "" "" "" ""
 
+
 mdSchemaDimensions :: Transport -> SearchSettings -> IO [Text]
-mdSchemaDimensions t settings = invokeWS t action () body (CursorParser parser)
-  where
-    action = "urn:schemas-microsoft-com:xml-analysis:Discover"
-
-    body = elementA "Discover" [("xmlns","urn:schemas-microsoft-com:xml-analysis")] $ do
-             element "RequestType" $ content "MDSCHEMA_DIMENSIONS"
-             element "Restrictions" $ element "RestrictionList"
-                                    $ element "CUBE_NAME"
-                                    $ content $ cubeName settings
-             element "Properties" $ element "PropertyList"
-                                  $ element "Catalog"
-                                  $ content $ catalogName settings
-
-    parser :: Cursor -> [Text]
-    parser c = dimensions
-      where
-        rows = c $// laxElement "row"
-        dimensions = fmap (readT "DIMENSION_UNIQUE_NAME") rows
+mdSchemaDimensions t settings = mdSchemaGeneric t settings "MDSCHEMA_DIMENSIONS" "DIMENSION_UNIQUE_NAME"
 
 
 mdSchemaHierarchies :: Transport -> SearchSettings -> IO [Text]
-mdSchemaHierarchies t settings = invokeWS t action () body (CursorParser parser)
-  where
-    action = "urn:schemas-microsoft-com:xml-analysis:Discover"
-
-    body = elementA "Discover" [("xmlns","urn:schemas-microsoft-com:xml-analysis")] $ do
-      element "RequestType" $ content "MDSCHEMA_HIERARCHIES"
-      element "Restrictions" $ element "RestrictionList" $ do
-        element "CUBE_NAME" $ content $ cubeName settings
-        element "DIMENSION_UNIQUE_NAME" $ content $ dimensionName settings
-      element "Properties" $ element "PropertyList"
-                          $ element "Catalog"
-                          $ content $ catalogName settings
-
-    parser :: Cursor -> [Text]
-    parser c = dimensions
-      where
-        rows = c $// laxElement "row"
-        dimensions = fmap (readT "HIERARCHY_UNIQUE_NAME") rows
+mdSchemaHierarchies t settings = mdSchemaGeneric t settings "MDSCHEMA_HIERARCHIES" "HIERARCHY_UNIQUE_NAME"
 
 
 mdSchemaLevels :: Transport -> SearchSettings -> IO [Text]
-mdSchemaLevels t settings = invokeWS t action () body (CursorParser parser)
+mdSchemaLevels t settings = mdSchemaGeneric t settings "MDSCHEMA_LEVELS" "LEVEL_UNIQUE_NAME"
+
+
+type RequestType = Text
+type ParseElement = Text
+
+
+mdSchemaGeneric :: Transport -> SearchSettings -> RequestType -> ParseElement -> IO [Text]
+mdSchemaGeneric t settings reqType parseElement = invokeWS t action () body (CursorParser parser)
   where
     action = "urn:schemas-microsoft-com:xml-analysis:Discover"
 
     body = elementA "Discover" [("xmlns","urn:schemas-microsoft-com:xml-analysis")] $ do
-      element "RequestType" $ content "MDSCHEMA_LEVELS"
+      element "RequestType" $ content reqType
       element "Restrictions" $ element "RestrictionList" $ do
         element "CUBE_NAME" $ content $ cubeName settings
-        element "HIERARCHY_UNIQUE_NAME" $ content $ hierarchyName settings
+        element "DIMENSION_UNIQUE_NAME" $ content $ dimensionName settings
+        unless (reqType == "MDSCHEMA_DIMENSIONS") $ element "HIERARCHY_UNIQUE_NAME" $ content $ hierarchyName settings
       element "Properties" $ element "PropertyList"
                           $ element "Catalog"
                           $ content $ catalogName settings
 
     parser :: Cursor -> [Text]
-    parser c = dimensions
+    parser c = result
       where
         rows = c $// laxElement "row"
-        dimensions = fmap (readT "LEVEL_UNIQUE_NAME") rows
+        result = fmap (readT parseElement) rows
 
 
 executeMdx :: Transport -> SearchSettings -> MdxQuery -> IO (IntMap [Text], IntMap Double)
