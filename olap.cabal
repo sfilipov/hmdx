@@ -16,6 +16,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Database.OLAP
+                     , Database.HMDX.Info
   ghc-options:         -Wall -fwarn-tabs
   build-depends:       base >= 4.7 && < 5
                      , containers
@@ -24,6 +25,8 @@ library
                      , text
                      , xml-conduit
                      , xml-conduit-writer
+                     , template-haskell
+                     , http-client
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
                        NoImplicitPrelude

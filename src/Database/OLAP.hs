@@ -1,5 +1,6 @@
 module Database.OLAP
     ( defaultSettings
+    , SearchSettings
     , catalogName
     , cubeName
     , dimensionName
@@ -32,15 +33,15 @@ defaultSettings = SearchSettings "" "" "" ""
 
 
 mdSchemaDimensions :: Transport -> SearchSettings -> IO [Text]
-mdSchemaDimensions t settings = mdSchemaGeneric t settings "MDSCHEMA_DIMENSIONS" "DIMENSION_UNIQUE_NAME"
+mdSchemaDimensions t settings = mdSchemaGeneric t settings "MDSCHEMA_DIMENSIONS" "DIMENSION_NAME"
 
 
 mdSchemaHierarchies :: Transport -> SearchSettings -> IO [Text]
-mdSchemaHierarchies t settings = mdSchemaGeneric t settings "MDSCHEMA_HIERARCHIES" "HIERARCHY_UNIQUE_NAME"
+mdSchemaHierarchies t settings = mdSchemaGeneric t settings "MDSCHEMA_HIERARCHIES" "HIERARCHY_NAME"
 
 
 mdSchemaLevels :: Transport -> SearchSettings -> IO [Text]
-mdSchemaLevels t settings = mdSchemaGeneric t settings "MDSCHEMA_LEVELS" "LEVEL_UNIQUE_NAME"
+mdSchemaLevels t settings = mdSchemaGeneric t settings "MDSCHEMA_LEVELS" "LEVEL_NAME"
 
 
 type RequestType = Text
