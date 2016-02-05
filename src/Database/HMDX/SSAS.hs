@@ -1,4 +1,4 @@
-module Database.OLAP
+module Database.HMDX.SSAS
     ( defaultSettings
     , SearchSettings
     , catalogName

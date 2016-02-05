@@ -4,10 +4,10 @@ module Main where
 import           BasicPrelude
 import           Network.HTTP.Client (Request, applyBasicAuth)
 import           Network.SOAP.Transport.HTTP (initTransport)
-import           Database.OLAP ( defaultSettings
-                               , catalogName
-                               , cubeName
-                               , mdSchemaDimensions)
+import           Database.HMDX.SSAS ( defaultSettings
+                                    , catalogName
+                                    , cubeName
+                                    , mdSchemaDimensions)
 import           Database.HMDX.Info
 
 

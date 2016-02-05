@@ -3,10 +3,10 @@ module Database.HMDX.Info
     ( createDB
     ) where
 
-import           Database.OLAP ( defaultSettings
-                               , catalogName
-                               , cubeName
-                               , mdSchemaDimensions)
+import           Database.HMDX.SSAS ( defaultSettings
+                                    , catalogName
+                                    , cubeName
+                                    , mdSchemaDimensions)
 
 import           BasicPrelude hiding (putStrLn)
 import           Network.HTTP.Client (Request, applyBasicAuth)
