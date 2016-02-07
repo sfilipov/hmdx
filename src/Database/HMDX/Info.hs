@@ -8,12 +8,12 @@ import           Database.HMDX.SSAS ( defaultSettings
                                     , cubeName
                                     , mdSchemaDimensions)
 
-import           BasicPrelude hiding (putStrLn)
+import           BasicPrelude hiding (putStrLn, words)
 import           Network.HTTP.Client (Request, applyBasicAuth)
 import           Network.SOAP.Transport.HTTP (initTransport)
 import           Language.Haskell.TH
 import           Data.Char (toUpper, isSpace)
-import           Prelude (putStrLn)
+import           Prelude (putStrLn, words)
 
 
 {-#NOINLINE createDB #-}
@@ -26,33 +26,51 @@ createDB = do
       , cubeName = "Adventure Works"
       }
   transport <- runIO $ initTransport url addAuth id
-  dimensions <- runIO $ mdSchemaDimensions transport settings
+  dText <- runIO $ mdSchemaDimensions transport settings
+  let dimensions = map (toTitleCase . textToString) dText
   qs <- createDimensionRecords dimensions
   runIO $ putStrLn $ pprint qs
+  cr <- createIntersectionRecord dimensions
+  runIO $ putStrLn $ pprint cr
   return qs
 
 addAuth :: Request -> Request
 addAuth = applyBasicAuth "WIN-SSAS\\ReadUser" "Password01"
 
-createDimensionRecords :: [Text] -> Q [Dec]
+createDimensionRecords :: [String] -> Q [Dec]
 createDimensionRecords xs = return $ map createDimensionRecord xs
 
-createDimensionRecord :: Text -> Dec
-createDimensionRecord dimName = DataD context name vars cons derives where
-  context = []
-  name = mkName $ toTitleCase $ removeSpace $ textToString dimName
-  vars = []
-  cons = [NormalC name [field]]
-  field = (NotStrict, ConT ''String)
-  derives = [''Show]
+createDimensionRecord :: String -> Dec
+createDimensionRecord dimName = DataD context name vars cons derives
+  where
+    context = []
+    name = mkName dimName
+    vars = []
+    cons = [NormalC name [field]]
+    field = (NotStrict, ConT ''String)
+    derives = [''Show]
+
+createIntersectionRecord :: [String] -> Q Dec
+createIntersectionRecord dimensions = return $ DataD context name vars cons derives
+  where
+    context = []
+    name = mkName "Intersection"
+    vars = []
+    field = (NotStrict, createDimensionsTuple (reverse dimensions) $ length dimensions)
+    cons = [NormalC name [field]]
+    derives = [''Show]
+
+
+type NumberOfDimensions = Int
+createDimensionsTuple :: [String] -> NumberOfDimensions -> Type
+createDimensionsTuple []     _ = error "List of dimensions should not be empty!"
+createDimensionsTuple [x]    n = AppT (TupleT n) (ConT $ mkName x)
+createDimensionsTuple (x:xs) n = AppT (createDimensionsTuple xs n) (ConT $ mkName x)
+
 
 toTitleCase :: String -> String
-toTitleCase [] = ""
-toTitleCase [x] = [toUpper x]
-toTitleCase (x:xs) = toUpper x : xs
+toTitleCase =  concat . map capitaliseWord . words
 
-removeSpace :: String -> String
-removeSpace [] = ""
-removeSpace (x:xs)
-    | isSpace x = removeSpace xs
-    | otherwise = x : removeSpace xs
+capitaliseWord :: String -> String
+capitaliseWord [] = ""
+capitaliseWord (x:xs) = toUpper x : xs
