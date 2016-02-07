@@ -12,7 +12,7 @@ import           BasicPrelude hiding (putStrLn, words)
 import           Network.HTTP.Client (Request, applyBasicAuth)
 import           Network.SOAP.Transport.HTTP (initTransport)
 import           Language.Haskell.TH
-import           Data.Char (toUpper, isSpace)
+import           Data.Char (toUpper)
 import           Prelude (putStrLn, words)
 
 
