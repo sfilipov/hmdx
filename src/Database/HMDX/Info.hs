@@ -30,7 +30,9 @@ createDB = do
   let dimensions = map (toTitleCase . textToString) dText
   qs <- createDimensionRecords dimensions
   runIO $ putStrLn $ pprint qs
-  cr <- createIntersectionRecord dimensions
+  ir <- createIntersectionRecord dimensions
+  runIO $ putStrLn $ pprint ir
+  cr <- createCubeRecord
   runIO $ putStrLn $ pprint cr
   return qs
 
@@ -66,6 +68,16 @@ createDimensionsTuple :: [String] -> NumberOfDimensions -> Type
 createDimensionsTuple []     _ = error "List of dimensions should not be empty!"
 createDimensionsTuple [x]    n = AppT (TupleT n) (ConT $ mkName x)
 createDimensionsTuple (x:xs) n = AppT (createDimensionsTuple xs n) (ConT $ mkName x)
+
+createCubeRecord :: Q Dec
+createCubeRecord = return $ DataD context name vars cons derives
+  where
+    context = []
+    name = mkName "Cube"
+    vars = []
+    field = (NotStrict, AppT ListT (AppT (AppT (TupleT 2) (ConT $ mkName "Intersection")) (ConT ''Double)))
+    cons = [NormalC name [field]]
+    derives = [''Show]
 
 
 toTitleCase :: String -> String
