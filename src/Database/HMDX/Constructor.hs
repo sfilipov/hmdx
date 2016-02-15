@@ -43,9 +43,3 @@ instance Show MdxExpr where
       showFrom = "FROM " ++ show (subcube mdx) ++ "\n"
       showWhere Nothing = ""
       showWhere (Just setExpr) = "WHERE " ++ show setExpr
-
-
-showAnyList ::(Show a) => [a] -> String
-showAnyList [] = ""
-showAnyList [x] = show x
-showAnyList (x:xs) = show x ++ ", " ++ showAnyList xs
