@@ -11,9 +11,17 @@ instance Show SetExpr where
       separateWithComma = intercalate ", "
 
 
-data QueryAxisExpr = QAE SetExpr Int deriving (Eq)
-instance Show QueryAxisExpr where
-  show (QAE se i) = show se ++ " ON " ++ show i
+data QueryExpr = Star
+               | QueryExpr [(SetExpr, Int)]
+               deriving (Eq)
+instance Show QueryExpr where
+  show Star = "*"
+  show (QueryExpr exprs) = showAxes exprs
+    where
+      showAxes [] = ""
+      showAxes [x] = showTuple x
+      showAxes (x:xs) = showTuple x ++ ", " ++ showAxes xs
+      showTuple (se, int) = show se ++ " ON " ++ show int
 
 
 data SubcubeExpr = CubeName String
@@ -24,14 +32,14 @@ instance Show SubcubeExpr where
   show (Subcube mdx) = show mdx
 
 
-data MdxExpr = MdxExpr { axes    :: [QueryAxisExpr]
+data MdxExpr = MdxExpr { axes    :: QueryExpr
                        , subcube :: SubcubeExpr
                        , slicer  :: Maybe SetExpr
                        } deriving (Eq)
 instance Show MdxExpr where
   show mdx@MdxExpr {slicer = maybeWhere} = showSelect ++ showFrom ++ showWhere maybeWhere
     where
-      showSelect = "SELECT " ++ showAnyList (axes mdx)  ++ "\n"
+      showSelect = "SELECT " ++ show (axes mdx)  ++ "\n"
       showFrom = "FROM " ++ show (subcube mdx) ++ "\n"
       showWhere Nothing = ""
       showWhere (Just setExpr) = "WHERE " ++ show setExpr
