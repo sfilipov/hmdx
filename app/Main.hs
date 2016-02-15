@@ -10,8 +10,10 @@ createDB
 
 main :: IO ()
 main = do
-    let selects = [ QAE "[Product].[Category]" 0
-                  , QAE "[Measure]" 1]
-    let froms = CubeName "Adventure Works"
-    let mdx = MdxExpr { select = selects, from = froms}
+    let a = [ QAE (SetExpr ["[Product].[Category]"]) 0
+            , QAE (SetExpr ["[Measure]"]) 1
+            ]
+    let subcubes = CubeName "[Adventure Works]"
+    let wh = Just (SetExpr ["[Geography].[Country].&[United Kingdom]"])
+    let mdx = MdxExpr { axes = a, subcube = subcubes, slicer = wh}
     print mdx
