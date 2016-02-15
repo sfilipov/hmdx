@@ -15,7 +15,8 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Database.HMDX.Info
+  exposed-modules:     Database.HMDX.Constructor
+                     , Database.HMDX.Info
                      , Database.HMDX.SSAS
   ghc-options:         -Wall -fwarn-tabs
   build-depends:       base >= 4.7 && < 5
