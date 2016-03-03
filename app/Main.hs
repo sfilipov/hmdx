@@ -6,7 +6,6 @@ import           Database.HMDX.Info
 import           Database.HMDX.Deconstructor
 import           Language.Haskell.TH
 
-
 createDB
 
 main :: IO ()
@@ -16,7 +15,7 @@ main = do
 
 express :: ExpQ
 express = [| do
-  (p, d, m) <- Date "irrelevant"
+  (_, d, m) <- cube
   -- guard $ isDescendantOf (Date "2016")
-  guard (p == Product "Bike")
+  -- guard (p == Product "Bike")
   return (m, d) |]

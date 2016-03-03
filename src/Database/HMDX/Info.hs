@@ -30,11 +30,9 @@ createDB = do
   let dimensions = map (toTitleCase . textToString) dText
   qs <- createDimensionRecords dimensions
   runIO $ putStrLn $ pprint qs
-  ir <- createIntersectionRecord dimensions
+  ir <- createCubeRecord dimensions
   runIO $ putStrLn $ pprint ir
-  cr <- createCubeRecord
-  runIO $ putStrLn $ pprint cr
-  return qs
+  return $ qs ++ [ir]
 
 addAuth :: Request -> Request
 addAuth = applyBasicAuth "WIN-SSAS\\ReadUser" "Password01"
@@ -43,42 +41,20 @@ createDimensionRecords :: [String] -> Q [Dec]
 createDimensionRecords xs = return $ map createDimensionRecord xs
 
 createDimensionRecord :: String -> Dec
-createDimensionRecord dimName = DataD context name vars cons derives
+createDimensionRecord dimName = FunD name clausexs
   where
-    context = []
-    name = mkName dimName
-    vars = []
-    cons = [NormalC name [field]]
-    field = (NotStrict, ConT ''String)
-    derives = [''Show]
+    name = mkName ("dim" ++ dimName)
+    body = NormalB (LitE (StringL dimName))
+    clausexs = [Clause [] body []]
 
-createIntersectionRecord :: [String] -> Q Dec
-createIntersectionRecord dimensions = return $ DataD context name vars cons derives
+createCubeRecord :: [String] -> Q Dec
+createCubeRecord dimensions = return $ FunD name clausexs
   where
-    context = []
-    name = mkName "Intersection"
-    vars = []
-    field = (NotStrict, createDimensionsTuple (reverse dimensions) $ length dimensions)
-    cons = [NormalC name [field]]
-    derives = [''Show]
-
-
-type NumberOfDimensions = Int
-createDimensionsTuple :: [String] -> NumberOfDimensions -> Type
-createDimensionsTuple []     _ = error "List of dimensions should not be empty!"
-createDimensionsTuple [x]    n = AppT (TupleT n) (ConT $ mkName x)
-createDimensionsTuple (x:xs) n = AppT (createDimensionsTuple xs n) (ConT $ mkName x)
-
-createCubeRecord :: Q Dec
-createCubeRecord = return $ DataD context name vars cons derives
-  where
-    context = []
-    name = mkName "Cube"
-    vars = []
-    field = (NotStrict, AppT ListT (AppT (AppT (TupleT 2) (ConT $ mkName "Intersection")) (ConT ''Double)))
-    cons = [NormalC name [field]]
-    derives = [''Show]
-
+    name = mkName "cube"
+    dimToFunName dimName = mkName ("dim" ++ dimName)
+    funVarEs = fmap (VarE . dimToFunName) dimensions
+    body = NormalB (TupE funVarEs)
+    clausexs = [Clause [] body []]
 
 toTitleCase :: String -> String
 toTitleCase =  concat . map capitaliseWord . words
