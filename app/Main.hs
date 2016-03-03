@@ -3,17 +3,20 @@ module Main where
 
 import           BasicPrelude
 import           Database.HMDX.Info
-import           Database.HMDX.Constructor
+import           Database.HMDX.Deconstructor
+import           Language.Haskell.TH
 
 
 createDB
 
 main :: IO ()
 main = do
-    let a = QueryExpr [ (SetExpr ["[Product].[Category]"], 0)
-                      , (SetExpr ["[Measure]"], 1)
-                      ]
-    let subcubes = CubeName "[Adventure Works]"
-    let wh = Just (SetExpr ["[Geography].[Country].&[United Kingdom]"])
-    let mdx = MdxExpr { axes = a, subcube = subcubes, slicer = wh}
-    print mdx
+    let result = expQToMDX express
+    print result
+
+express :: ExpQ
+express = [| do
+  (p, d, m) <- Date "irrelevant"
+  -- guard $ isDescendantOf (Date "2016")
+  guard (p == Product "Bike")
+  return (m, d) |]

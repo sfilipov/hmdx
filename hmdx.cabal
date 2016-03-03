@@ -16,6 +16,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Database.HMDX.Constructor
+                     , Database.HMDX.Deconstructor
                      , Database.HMDX.Info
                      , Database.HMDX.SSAS
   ghc-options:         -Wall -fwarn-tabs
@@ -44,6 +45,7 @@ executable hmdx-exe
                      , xml-conduit-writer
                      , xml-conduit
                      , text
+                     , template-haskell
                      , http-client
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
