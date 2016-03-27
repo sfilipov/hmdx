@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Database.HMDX.Info
-    ( createDB
+    ( defaultDBSettings
+    , createDB
     ) where
 
 import           Database.HMDX.SSAS ( defaultSettings
@@ -9,23 +10,42 @@ import           Database.HMDX.SSAS ( defaultSettings
                                     , mdSchemaDimensions)
 
 import           BasicPrelude hiding (putStrLn, words)
-import           Network.HTTP.Client (Request, applyBasicAuth)
+import           Network.HTTP.Client (applyBasicAuth)
 import           Network.SOAP.Transport.HTTP (initTransport)
 import           Language.Haskell.TH
 import           Data.Char (toUpper)
+import           Data.Text (unpack)
 import           Prelude (putStrLn, words)
 
 
+data DBSettings = DBSettings
+    { host :: Text
+    , port :: Int
+    , user :: Text
+    , password :: Text
+    , catalog :: Text
+    , cube :: Text
+    }
+
+fullUrl :: DBSettings -> Text
+fullUrl settings = "http://" ++ hostAndPort ++ "/OLAP/msmdpump.dll"
+  where
+    hostAndPort = host settings ++ ":" ++ show (port settings)
+
+defaultDBSettings :: DBSettings
+defaultDBSettings = DBSettings "localhost" 8080 "WIN-SSAS\\ReadUser" "Password01" "AdventureWorksDW2012Multidimensional-SE" "Adventure Works"
+
 {-#NOINLINE createDB #-}
-createDB :: Q [Dec]
-createDB = do
-  let ip = "localhost:8080"
-  let url = "http://" ++ ip ++ "/OLAP/msmdpump.dll"
+createDB :: DBSettings -> Q [Dec]
+createDB dbsettings = do
+  let url = unpack $ fullUrl dbsettings
+  let u = encodeUtf8 $ user dbsettings
+  let p = encodeUtf8 $ password dbsettings
   let settings = defaultSettings {
-        catalogName = "AdventureWorksDW2012Multidimensional-SE"
-      , cubeName = "Adventure Works"
+        catalogName = catalog dbsettings
+      , cubeName = cube dbsettings
       }
-  transport <- runIO $ initTransport url addAuth id
+  transport <- runIO $ initTransport url (applyBasicAuth u p) id
   dText <- runIO $ mdSchemaDimensions transport settings
   let dimensions = map (toTitleCase . textToString) dText
   qs <- createDimensionRecords dimensions
@@ -33,9 +53,6 @@ createDB = do
   ir <- createCubeRecord dimensions
   runIO $ putStrLn $ pprint ir
   return $ qs ++ [ir]
-
-addAuth :: Request -> Request
-addAuth = applyBasicAuth "WIN-SSAS\\ReadUser" "Password01"
 
 createDimensionRecords :: [String] -> Q [Dec]
 createDimensionRecords xs = return $ map createDimensionRecord xs

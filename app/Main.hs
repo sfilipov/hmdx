@@ -6,7 +6,7 @@ import           Database.HMDX.Info
 import           Database.HMDX.Deconstructor
 import           Language.Haskell.TH
 
-createDB
+$(createDB defaultDBSettings)
 
 main :: IO ()
 main = do
