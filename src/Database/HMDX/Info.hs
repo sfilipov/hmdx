@@ -47,30 +47,31 @@ createDB dbsettings = do
       }
   transport <- runIO $ initTransport url (applyBasicAuth u p) id
   dText <- runIO $ mdSchemaDimensions transport settings
-  let dimensions = map (toTitleCase . textToString) dText
-  qs <- createDimensionRecords dimensions
+  let dimensions = map (toTitleCase . textToString) $ fst dText
+  let dimensionsUnique = map textToString $ snd dText
+  let d = zip dimensions dimensionsUnique
+  qs <- createDimensionRecords d
   runIO $ putStrLn $ pprint qs
-  ir <- createCubeRecord dimensions
+  ir <- createCubeRecord $ unpack $ cube dbsettings
   runIO $ putStrLn $ pprint ir
-  return $ qs ++ [ir]
+  return $ qs ++ ir
 
-createDimensionRecords :: [String] -> Q [Dec]
-createDimensionRecords xs = return $ map createDimensionRecord xs
+createDimensionRecords :: [(String, String)] -> Q [Dec]
+createDimensionRecords xs = return $ concat $ map createDimensionRecord xs
 
-createDimensionRecord :: String -> Dec
-createDimensionRecord dimName = FunD name clausexs
+createDimensionRecord :: (String, String) -> [Dec]
+createDimensionRecord (dimName, dimUnique) = [SigD name (ConT ''String), FunD name clausexs]
   where
     name = mkName ("dim" ++ dimName)
-    body = NormalB (LitE (StringL dimName))
+    body = NormalB (LitE (StringL dimUnique))
     clausexs = [Clause [] body []]
 
-createCubeRecord :: [String] -> Q Dec
-createCubeRecord dimensions = return $ FunD name clausexs
+createCubeRecord :: String -> Q [Dec]
+createCubeRecord cubeString = return [SigD name (ConT ''String), FunD name clausexs]
   where
     name = mkName "cube"
-    dimToFunName dimName = mkName ("dim" ++ dimName)
-    funVarEs = fmap (VarE . dimToFunName) dimensions
-    body = NormalB (TupE funVarEs)
+    cubeUniqueName = "[" ++ cubeString ++ "]"
+    body = NormalB (LitE (StringL cubeUniqueName))
     clausexs = [Clause [] body []]
 
 toTitleCase :: String -> String

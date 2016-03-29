@@ -32,24 +32,24 @@ defaultSettings :: SearchSettings
 defaultSettings = SearchSettings "" "" "" ""
 
 
-mdSchemaDimensions :: Transport -> SearchSettings -> IO [Text]
-mdSchemaDimensions t settings = mdSchemaGeneric t settings "MDSCHEMA_DIMENSIONS" "DIMENSION_NAME"
+mdSchemaDimensions :: Transport -> SearchSettings -> IO ([Text], [Text])
+mdSchemaDimensions t settings = mdSchemaGeneric t settings "MDSCHEMA_DIMENSIONS" "DIMENSION_NAME" "DIMENSION_UNIQUE_NAME"
 
 
-mdSchemaHierarchies :: Transport -> SearchSettings -> IO [Text]
-mdSchemaHierarchies t settings = mdSchemaGeneric t settings "MDSCHEMA_HIERARCHIES" "HIERARCHY_NAME"
+mdSchemaHierarchies :: Transport -> SearchSettings -> IO ([Text], [Text])
+mdSchemaHierarchies t settings = mdSchemaGeneric t settings "MDSCHEMA_HIERARCHIES" "HIERARCHY_NAME" "HIERARCHY_UNIQUE_NAME"
 
 
-mdSchemaLevels :: Transport -> SearchSettings -> IO [Text]
-mdSchemaLevels t settings = mdSchemaGeneric t settings "MDSCHEMA_LEVELS" "LEVEL_NAME"
+mdSchemaLevels :: Transport -> SearchSettings -> IO ([Text], [Text])
+mdSchemaLevels t settings = mdSchemaGeneric t settings "MDSCHEMA_LEVELS" "LEVEL_NAME" "LEVEL_UNIQUE_NAME"
 
 
 type RequestType = Text
 type ParseElement = Text
 
 
-mdSchemaGeneric :: Transport -> SearchSettings -> RequestType -> ParseElement -> IO [Text]
-mdSchemaGeneric t settings reqType parseElement = invokeWS t action () body (CursorParser parser)
+mdSchemaGeneric :: Transport -> SearchSettings -> RequestType -> ParseElement -> ParseElement -> IO ([Text], [Text])
+mdSchemaGeneric t settings reqType parseElement parseUniqueElement = invokeWS t action () body (CursorParser parser)
   where
     action = "urn:schemas-microsoft-com:xml-analysis:Discover"
 
@@ -63,11 +63,12 @@ mdSchemaGeneric t settings reqType parseElement = invokeWS t action () body (Cur
                           $ element "Catalog"
                           $ content $ catalogName settings
 
-    parser :: Cursor -> [Text]
-    parser c = result
+    parser :: Cursor -> ([Text], [Text])
+    parser c = (names, uniqueNames)
       where
         rows = c $// laxElement "row"
-        result = fmap (readT parseElement) rows
+        names = fmap (readT parseElement) rows
+        uniqueNames = fmap (readT parseUniqueElement) rows
 
 
 executeMdx :: Transport -> SearchSettings -> MdxQuery -> IO (IntMap [Text], IntMap Double)
