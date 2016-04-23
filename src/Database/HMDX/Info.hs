@@ -7,7 +7,9 @@ module Database.HMDX.Info
 import           Database.HMDX.SSAS ( defaultSettings
                                     , catalogName
                                     , cubeName
-                                    , mdSchemaDimensions)
+                                    , mdSchemaDimensions
+                                    , mdSchemaHierarchies
+                                    , mdSchemaLevels)
 
 import           BasicPrelude hiding (putStrLn, words)
 import           Network.HTTP.Client (applyBasicAuth)
@@ -51,10 +53,24 @@ createDB dbsettings = do
   let dimensionsUnique = map textToString $ snd dText
   let d = zip dimensions dimensionsUnique
   qs <- createDimensionRecords d
-  runIO $ putStrLn $ pprint qs
+  -- runIO $ putStrLn $ pprint qs
+  hText <- runIO $ mdSchemaHierarchies transport settings
+  let hierarchies = map (toTitleCase . textToString) $ fst hText
+  let hierarchiesUnique = map textToString $ snd hText
+  let h = zip hierarchies hierarchiesUnique
+  qhs <- createHierarchyRecords h
+  -- runIO $ putStrLn $ pprint qhs
+  lText <- runIO $ mdSchemaLevels transport settings
+  let levels = map (toTitleCase . textToString) $ fst lText
+  let levelsUnique = map textToString $ snd lText
+  let l = zip levels levelsUnique
+  qls <- createLevelRecords l
+  -- runIO $ putStrLn $ pprint qls
   ir <- createCubeRecord $ unpack $ cube dbsettings
-  runIO $ putStrLn $ pprint ir
+  -- runIO $ putStrLn $ pprint ir
   return $ qs ++ ir
+  return $ qhs ++ ir
+  -- return $ qs ++ qhs ++ qls ++ ir
 
 createDimensionRecords :: [(String, String)] -> Q [Dec]
 createDimensionRecords xs = return $ concat $ map createDimensionRecord xs
@@ -65,6 +81,39 @@ createDimensionRecord (dimName, dimUnique) = [SigD name (ConT ''String), FunD na
     name = mkName ("dim" ++ dimName)
     body = NormalB (LitE (StringL dimUnique))
     clausexs = [Clause [] body []]
+
+createHierarchyRecords :: [(String, String)] -> Q [Dec]
+createHierarchyRecords xs = return $ concat $ map createHierarchyRecord xs
+
+createHierarchyRecord :: (String, String) -> [Dec]
+createHierarchyRecord (hieName, hieUnique) = [SigD name (ConT ''String), FunD name clausexs]
+  where
+    name = mkName ("hie" ++ stripBad hieUnique)
+    body = NormalB (LitE (StringL hieUnique))
+    clausexs = [Clause [] body []]
+
+createLevelRecords :: [(String, String)] -> Q [Dec]
+createLevelRecords xs = return $ concat $ map createLevelRecord xs
+
+createLevelRecord :: (String, String) -> [Dec]
+createLevelRecord (hieName, hieUnique) = [SigD name (ConT ''String), FunD name clausexs]
+  where
+    name = mkName ("lvl" ++ stripBad hieUnique)
+    body = NormalB (LitE (StringL hieUnique))
+    clausexs = [Clause [] body []]
+
+
+stripBad :: String -> String
+stripBad [] = []
+stripBad (x:xs)
+    | x == '[' = stripBad xs
+    | x == ']' = stripBad xs
+    | x == '.' = stripBad xs
+    | x == '-' = stripBad xs
+    | x == '(' = stripBad xs
+    | x == ')' = stripBad xs
+    | x == ' ' = stripBad xs
+    | otherwise = x : stripBad xs
 
 createCubeRecord :: String -> Q [Dec]
 createCubeRecord cubeString = return [SigD name (ConT ''String), FunD name clausexs]
